@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flashcards</title>
+  <link rel="icon" href="data:," />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script>
+    (function () {
+      var v = String(Date.now());
+      window.__ssiAssetVersion = v;
+      var localStyle = document.createElement("link");
+      localStyle.rel = "stylesheet";
+      localStyle.href = "../css/styles.css?v=" + encodeURIComponent(v);
+      document.head.appendChild(localStyle);
+    })();
+  </script>
+</head>
+<body>
+  <div class="container py-4" style="max-width: 520px;">
+    <h1 class="h4 mb-3">Flashcards</h1>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div id="counter" class="small text-muted">0 / 0</div>
+          <button id="closeBtn" class="btn btn-sm btn-outline-secondary">Close</button>
+        </div>
+
+        <div id="cardBox" class="flashcard border rounded-4 p-4 bg-white">
+          <div id="sideLabel" class="small text-muted mb-2">Question</div>
+          <div id="cardText" class="fs-5" style="white-space: pre-wrap;"></div>
+        </div>
+
+        <div class="d-flex justify-content-between mt-3">
+          <button id="prevBtn" class="btn btn-outline-primary">Previous</button>
+          <button id="flipBtn" class="btn btn-primary">Flip</button>
+          <button id="nextBtn" class="btn btn-outline-primary">Next</button>
+        </div>
+
+        <div class="small text-muted mt-3">
+          Tips: Left/Right to navigate, Space to flip
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var v = window.__ssiAssetVersion || String(Date.now());
+      var scripts = [
+        "../js/theme.js",
+        "../js/flashcards.js",
+        "../js/dev-hot-reload.js"
+      ];
+
+      function loadScript(index) {
+        if (index >= scripts.length) return;
+        var script = document.createElement("script");
+        script.src = scripts[index] + "?v=" + encodeURIComponent(v);
+        script.onload = function () { loadScript(index + 1); };
+        script.onerror = function () { loadScript(index + 1); };
+        document.body.appendChild(script);
+      }
+
+      loadScript(0);
+    })();
+  </script>
+</body>
+</html>
