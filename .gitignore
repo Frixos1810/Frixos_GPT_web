@@ -29,3 +29,7 @@ Thumbs.db
 
 # Archives
 *.zip
+
+# Local-only folders in this monorepo
+ssi-backend/
+ssi_backend-quizmcq/
