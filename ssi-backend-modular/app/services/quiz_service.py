@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import random
 from typing import List, Literal
 
 from fastapi import HTTPException
@@ -113,6 +114,61 @@ def _to_mcq_options_payload(q: MCQQuestionPlan) -> dict:
     }
 
 
+def _build_randomized_options(plan_question: MCQQuestionPlan, correct_answer: str) -> dict:
+    correct_text = (correct_answer or "").strip()
+    raw_texts = [opt.text.strip() for opt in plan_question.options if opt.text and opt.text.strip()]
+
+    if not any(t.lower() == correct_text.lower() for t in raw_texts):
+        raw_texts.insert(0, correct_text)
+
+    # De-duplicate while preserving order
+    seen = set()
+    unique_texts: List[str] = []
+    for t in raw_texts:
+        key = t.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        unique_texts.append(t)
+
+    # Ensure at least 4 options by adding neutral distractors
+    fillers = [
+        "Not indicated in the flashcard",
+        "Not enough information provided",
+        "None of the above",
+        "Cannot be determined",
+    ]
+    for filler in fillers:
+        if len(unique_texts) >= 4:
+            break
+        if filler.lower() in seen:
+            continue
+        unique_texts.append(filler)
+        seen.add(filler.lower())
+
+    # Shuffle and select 4 options
+    random.shuffle(unique_texts)
+    options = unique_texts[:4] if len(unique_texts) >= 4 else unique_texts
+
+    # Guarantee correct answer is present
+    if not any(t.lower() == correct_text.lower() for t in options):
+        if options:
+            options[-1] = correct_text
+        else:
+            options = [correct_text]
+
+    labels = ["A", "B", "C", "D"]
+    payload_options = []
+    correct_label = "A"
+    for idx, text in enumerate(options):
+        label = labels[idx] if idx < len(labels) else f"Option {idx+1}"
+        payload_options.append({"label": label, "text": text})
+        if text.lower() == correct_text.lower():
+            correct_label = label
+
+    return {"options": payload_options, "correct_label": correct_label}
+
+
 async def ensure_user_exists(db: AsyncSession, user_id: int):
     user = await get_user_by_id(db, user_id)
     if not user:
@@ -210,15 +266,11 @@ async def create_auto_mcq_quiz_for_user(
             raise HTTPException(502, "MCQ generation failed: question mapping missing")
 
         # Keep the exact flashcard answer as source of truth.
-        options_payload = _to_mcq_options_payload(plan_question)
-        for opt in options_payload["options"]:
-            if opt["label"] == plan_question.correct_label:
-                opt["text"] = card.answer
-                break
+        options_payload = _build_randomized_options(plan_question, card.answer)
 
         option_texts = [opt["text"].strip().lower() for opt in options_payload["options"]]
-        if len(set(option_texts)) != 4:
-            raise HTTPException(502, "MCQ generation failed: non-unique options")
+        if len(option_texts) != len(set(option_texts)) or len(option_texts) < 4:
+            raise HTTPException(502, "MCQ generation failed: options must be 4 unique values")
 
         db_question.question_text = card.question
         db_question.correct_answer = card.answer
