@@ -9,11 +9,38 @@ async function apiRequest(path, method = "GET", body = null) {
 
   if (body) options.body = JSON.stringify(body);
 
-  const res = await fetch(`${API_BASE}${path}`, options);
+  let res;
+  try {
+    res = await fetch(`${API_BASE}${path}`, options);
+  } catch (_) {
+    throw new Error(
+      `Cannot reach backend at ${API_BASE}. Start FastAPI and try again.`
+    );
+  }
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `HTTP ${res.status}`);
+    const contentType = res.headers.get("content-type") || "";
+    const statusText = res.statusText ? ` ${res.statusText}` : "";
+    const prefix = `Request failed (${res.status}${statusText}).`;
+
+    if (contentType.includes("application/json")) {
+      const text = await res.text();
+      if (text && text.trim()) {
+        try {
+          const payload = JSON.parse(text);
+          const detail =
+            payload.detail || payload.message || payload.error || text;
+          throw new Error(`${prefix} ${detail}`);
+        } catch {
+          throw new Error(`${prefix} ${text}`);
+        }
+      }
+    } else {
+      const text = await res.text();
+      if (text && text.trim()) throw new Error(`${prefix} ${text}`);
+    }
+
+    throw new Error(prefix);
   }
 
   // Handle empty 204/empty-body responses safely.

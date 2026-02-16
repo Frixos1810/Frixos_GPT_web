@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import User
@@ -15,7 +15,10 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
 
 
 async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
-    res = await db.execute(select(User).where(User.email == email))
+    normalized = email.strip().lower()
+    res = await db.execute(
+        select(User).where(func.lower(User.email) == normalized)
+    )
     return res.scalar_one_or_none()
 
 

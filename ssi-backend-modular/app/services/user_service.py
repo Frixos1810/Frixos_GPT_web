@@ -24,19 +24,21 @@ async def get_user_or_404(db: AsyncSession, user_id: int):
 
 
 async def register_user(db: AsyncSession, payload: UserCreate) -> UserOut:
+    normalized_email = str(payload.email).strip().lower()
+
     # password confirmation
     if payload.password != payload.confirm_password:
         raise HTTPException(status_code=400, detail="Passwords do not match.")
 
     # unique email
-    existing = await get_user_by_email(db, payload.email)
+    existing = await get_user_by_email(db, normalized_email)
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered.")
 
     pw_hash = hash_password(payload.password)
     user = await create_user(
         db,
-        email=payload.email,
+        email=normalized_email,
         name=payload.name,
         password_hash=pw_hash,
     )
@@ -47,7 +49,8 @@ async def authenticate_user(
     db: AsyncSession,
     payload: UserLogin,
 ) -> UserOut:
-    user = await get_user_by_email(db, payload.email)
+    normalized_email = str(payload.email).strip().lower()
+    user = await get_user_by_email(db, normalized_email)
     if not user or not user.password_hash:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
