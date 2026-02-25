@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin | Knowledge Sources</title>
+  <link rel="icon" href="data:," />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script>
+    (function () {
+      var v = String(Date.now());
+      window.__ssiAssetVersion = v;
+      var localStyle = document.createElement("link");
+      localStyle.rel = "stylesheet";
+      localStyle.href = "../css/styles.css?v=" + encodeURIComponent(v);
+      document.head.appendChild(localStyle);
+    })();
+  </script>
+</head>
+<body class="admin-page">
+  <nav class="navbar border-bottom app-navbar">
+    <div class="container-fluid app-navbar-inner">
+      <div class="app-navbar-left">
+        <div class="navbar-brand mb-0 app-brand app-brand-chat">
+          <div class="app-brand-title">SurgiNurse AI</div>
+          <div class="app-brand-subtitle">Admin - Knowledge Base Source Control</div>
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary btn-sm" href="chat.html">Back to Chat</a>
+        <button class="btn btn-outline-danger btn-sm" id="logoutBtn" type="button">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container py-4">
+    <div id="adminAlert" class="alert d-none" role="alert"></div>
+
+    <div id="notAuthorizedCard" class="card border-danger d-none">
+      <div class="card-body">
+        <h1 class="h5 text-danger mb-2">Not authorized</h1>
+        <p class="mb-2">This page is only available to admin users.</p>
+        <a href="chat.html" class="btn btn-sm btn-outline-secondary">Return to chat</a>
+      </div>
+    </div>
+
+    <div id="adminApp" class="d-none">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+          <h1 class="h4 mb-1">Knowledge Sources</h1>
+          <div class="text-muted small">
+            Auto-synced from the OpenAI vector store. Use toggles to allow or block files as retrieval references.
+          </div>
+        </div>
+        <button id="reindexBtn" class="btn btn-outline-primary" type="button">Sync Vector Store Files</button>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h2 class="h6 mb-0">Vector Store Files</h2>
+            <button id="refreshSourcesBtn" class="btn btn-sm btn-outline-secondary" type="button">Reload</button>
+          </div>
+
+          <div id="sourcesTableWrap" class="table-responsive">
+            <table class="table align-middle" id="sourcesTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Filename</th>
+                  <th>Type</th>
+                  <th>Vector Store File ID</th>
+                  <th>Enabled</th>
+                  <th>Verified</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="sourcesTableBody"></tbody>
+            </table>
+          </div>
+
+          <div id="sourcesEmptyState" class="text-muted small d-none">
+            No vector store files found (or sync failed).
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      var v = window.__ssiAssetVersion || String(Date.now());
+      var scripts = [
+        "../js/api.js",
+        "../js/auth.js",
+        "../js/theme.js",
+        "../js/admin.js",
+        "../js/dev-hot-reload.js"
+      ];
+
+      function loadScript(index) {
+        if (index >= scripts.length) return;
+        var script = document.createElement("script");
+        script.src = scripts[index] + "?v=" + encodeURIComponent(v);
+        script.onload = function () { loadScript(index + 1); };
+        script.onerror = function () { loadScript(index + 1); };
+        document.body.appendChild(script);
+      }
+
+      loadScript(0);
+    })();
+  </script>
+</body>
+</html>

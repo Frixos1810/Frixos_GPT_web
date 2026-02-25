@@ -31,6 +31,11 @@ from app.repositories.quiz_repository import (
 )
 
 
+def _normalize_user_role(value: object) -> str:
+    role = str(value).strip().lower() if value is not None else ""
+    return "admin" if role == "admin" else "user"
+
+
 class MCQOption(BaseModel):
     model_config = ConfigDict(extra="forbid")
     label: Literal["A", "B", "C", "D"]
@@ -300,8 +305,14 @@ async def list_quizzes_for_user_service(
 async def get_quiz_detail_service(
     db: AsyncSession,
     quiz_id: int,
+    *,
+    current_user_id: int | None = None,
+    current_user_role: str | None = None,
 ) -> QuizDetailOut:
     quiz = await ensure_quiz_exists(db, quiz_id)
+    role = _normalize_user_role(current_user_role)
+    if current_user_id is not None and quiz.user_id != current_user_id and role != "admin":
+        raise HTTPException(403, "Not allowed to access this quiz")
     questions = await list_questions_for_quiz(db, quiz_id)
 
     return QuizDetailOut(
@@ -315,8 +326,14 @@ async def answer_quiz_question_service(
     quiz_id: int,
     question_id: int,
     payload: QuizQuestionAnswerIn,
+    *,
+    current_user_id: int | None = None,
+    current_user_role: str | None = None,
 ) -> QuizQuestionOut:
     quiz = await ensure_quiz_exists(db, quiz_id)
+    role = _normalize_user_role(current_user_role)
+    if current_user_id is not None and quiz.user_id != current_user_id and role != "admin":
+        raise HTTPException(403, "Not allowed to answer questions for this quiz")
     question = await ensure_question_exists(db, question_id)
 
     if question.quiz_id != quiz.id:

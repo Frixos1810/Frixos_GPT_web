@@ -26,6 +26,7 @@ from app.repositories.chat_repository import (
     create_message,
 )
 from app.repositories.flashcard_repository import create_flashcard
+from app.services.knowledge_source_service import get_knowledge_source_filter_policy
 
 from app.schemas.chat_schema import (
     ChatSessionCreate,
@@ -303,10 +304,12 @@ async def send_message_and_get_reply(
     evidence_payload: dict | None = None
     if vector_store_id:
         try:
+            source_filter_policy = await get_knowledge_source_filter_policy(db)
             rag_context, evidence_payload = build_vector_store_context(
                 query=payload.content,
                 vector_store_id=vector_store_id,
                 max_results=6,
+                source_filter_policy=source_filter_policy,
             )
         except Exception as exc:
             raise HTTPException(status_code=500, detail="Vector store search failed") from exc

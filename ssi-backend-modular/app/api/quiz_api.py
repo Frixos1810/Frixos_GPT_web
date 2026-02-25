@@ -6,7 +6,9 @@ from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import require_auth, require_path_user
 from app.db.session import get_db
+from app.models import User
 from app.schemas import (
     QuizCreate,
     QuizOut,
@@ -29,6 +31,7 @@ router = APIRouter(tags=["quizzes"])
     "/users/{user_id}/quizzes",
     response_model=QuizOut,
     status_code=201,
+    dependencies=[Depends(require_path_user)],
 )
 async def create_quiz(
     user_id: int,
@@ -42,6 +45,7 @@ async def create_quiz(
     "/users/{user_id}/quizzes/auto-mcq",
     response_model=QuizDetailOut,
     status_code=201,
+    dependencies=[Depends(require_path_user)],
 )
 async def create_auto_mcq_quiz(
     user_id: int,
@@ -54,6 +58,7 @@ async def create_auto_mcq_quiz(
 @router.get(
     "/users/{user_id}/quizzes",
     response_model=List[QuizOut],
+    dependencies=[Depends(require_path_user)],
 )
 async def list_quizzes(
     user_id: int,
@@ -68,9 +73,15 @@ async def list_quizzes(
 )
 async def get_quiz_detail(
     quiz_id: int,
+    current_user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db),
 ):
-    return await get_quiz_detail_service(db, quiz_id)
+    return await get_quiz_detail_service(
+        db,
+        quiz_id,
+        current_user_id=current_user.id,
+        current_user_role=getattr(current_user, "user_role", "user"),
+    )
 
 
 @router.post(
@@ -81,6 +92,7 @@ async def answer_question(
     quiz_id: int,
     question_id: int,
     payload: QuizQuestionAnswerIn,
+    current_user: User = Depends(require_auth),
     db: AsyncSession = Depends(get_db),
 ):
     return await answer_quiz_question_service(
@@ -88,4 +100,6 @@ async def answer_question(
         quiz_id,
         question_id,
         payload,
+        current_user_id=current_user.id,
+        current_user_role=getattr(current_user, "user_role", "user"),
     )

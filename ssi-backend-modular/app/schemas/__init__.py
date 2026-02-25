@@ -34,6 +34,12 @@ from .analytics_schema import (
     FlashcardStats,
     ExplanationOut,
 )
+from .knowledge_source_schema import (
+    KnowledgeSourceCreate,
+    KnowledgeSourceUpdate,
+    KnowledgeSourceOut,
+    KnowledgeSourceReindexOut,
+)
 
 __all__ = [
     # user
@@ -63,4 +69,9 @@ __all__ = [
     "UserStatsProgress",
     "FlashcardStats",
     "ExplanationOut",
+    # knowledge sources
+    "KnowledgeSourceCreate",
+    "KnowledgeSourceUpdate",
+    "KnowledgeSourceOut",
+    "KnowledgeSourceReindexOut",
 ]

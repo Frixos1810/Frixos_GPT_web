@@ -6,6 +6,7 @@ from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import require_path_user
 from app.db.session import get_db
 from app.schemas import (
     UserStatsOverview,
@@ -20,7 +21,11 @@ from app.services.analytics_service import (
     explain_question_service,
 )
 
-router = APIRouter(prefix="/users/{user_id}/stats", tags=["analytics"])
+router = APIRouter(
+    prefix="/users/{user_id}/stats",
+    tags=["analytics"],
+    dependencies=[Depends(require_path_user)],
+)
 
 
 @router.get("/overview", response_model=UserStatsOverview)

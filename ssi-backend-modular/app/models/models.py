@@ -26,6 +26,12 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     name: Mapped[Optional[str]] = mapped_column(String(255))
     password_hash: Mapped[Optional[str]] = mapped_column(String(255))
+    user_role: Mapped[str] = mapped_column(
+        String(20),
+        default="user",
+        server_default="user",
+        nullable=False,
+    )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP, default=datetime.utcnow, nullable=False
     )
@@ -41,6 +47,9 @@ class User(Base):
     )
     quizzes: Mapped[List["Quiz"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
+    )
+    knowledge_source_audit_entries: Mapped[List["KnowledgeSourceAudit"]] = relationship(
+        back_populates="admin_user"
     )
 
 
@@ -160,3 +169,48 @@ class QuizQuestion(Base):
 
     quiz: Mapped["Quiz"] = relationship(back_populates="quiz_questions")
     flashcard: Mapped["Flashcard"] = relationship(back_populates="quiz_questions")
+
+
+class KnowledgeSource(Base):
+    __tablename__ = "knowledge_sources"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    source_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    source_ref: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, default=datetime.utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, default=datetime.utcnow, nullable=False
+    )
+
+    audit_entries: Mapped[List["KnowledgeSourceAudit"]] = relationship(
+        back_populates="source",
+        passive_deletes=True,
+    )
+
+
+class KnowledgeSourceAudit(Base):
+    __tablename__ = "knowledge_source_audit"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    admin_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    action: Mapped[str] = mapped_column(String(50), nullable=False)
+    source_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("knowledge_sources.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, default=datetime.utcnow, nullable=False
+    )
+
+    admin_user: Mapped["User"] = relationship(back_populates="knowledge_source_audit_entries")
+    source: Mapped[Optional["KnowledgeSource"]] = relationship(back_populates="audit_entries")

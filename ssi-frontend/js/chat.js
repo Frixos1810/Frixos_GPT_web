@@ -26,6 +26,7 @@ const input = document.getElementById("messageInput");
 const chatMain = document.querySelector(".chat-main");
 const viewFlashcardsBtn = document.getElementById("viewFlashcardsBtn");
 const flashcardStatusEl = document.getElementById("flashcardStatus");
+const adminNavLink = document.getElementById("adminNavLink");
 const showChatsTabBtn = document.getElementById("showChatsTabBtn");
 const showAnalyticsTabBtn = document.getElementById("showAnalyticsTabBtn");
 const showSettingsTabBtn = document.getElementById("showSettingsTabBtn");
@@ -66,6 +67,25 @@ const analyticsTrendChart = document.getElementById("analyticsTrendChart");
 const analyticsHistoryList = document.getElementById("analyticsHistoryList");
 const analyticsMasterySummary = document.getElementById("analyticsMasterySummary");
 const analyticsFlashcardsList = document.getElementById("analyticsFlashcardsList");
+
+function applyAdminNavVisibility(userRole) {
+  if (!adminNavLink) return;
+  const isAdmin = String(userRole ?? "").trim().toLowerCase() === "admin";
+  adminNavLink.classList.toggle("d-none", !isAdmin);
+}
+
+async function hydrateCurrentUserRole() {
+  applyAdminNavVisibility(typeof getUserRole === "function" ? getUserRole() : "user");
+  try {
+    const me = await apiRequest("/users/me");
+    if (typeof setUserRole === "function") {
+      setUserRole(me?.user_role ?? "user");
+    }
+    applyAdminNavVisibility(me?.user_role ?? "user");
+  } catch (_) {
+    applyAdminNavVisibility("user");
+  }
+}
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -1336,6 +1356,7 @@ themeToggle.onchange = () => {
 // Initial load
 (async () => {
   loadTheme();
+  await hydrateCurrentUserRole();
   setSideTab("chats");
   setSidebarVisible(true);
   await loadChats();

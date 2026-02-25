@@ -6,6 +6,7 @@ from typing import List
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import require_path_user
 from app.db.session import get_db
 from app.schemas import FlashcardCreate, FlashcardOut
 from app.services.flashcard_service import (
@@ -17,7 +18,11 @@ from app.services.flashcard_service import (
 )
 
 # THIS must exist at module level so main.py can import it
-router = APIRouter(prefix="/users/{user_id}", tags=["flashcards"])
+router = APIRouter(
+    prefix="/users/{user_id}",
+    tags=["flashcards"],
+    dependencies=[Depends(require_path_user)],
+)
 
 
 @router.post("/flashcards", response_model=FlashcardOut, status_code=201)

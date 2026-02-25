@@ -1,9 +1,18 @@
 const API_BASE = "http://127.0.0.1:8000";
 
 async function apiRequest(path, method = "GET", body = null) {
+  const headers = { "Content-Type": "application/json" };
+  try {
+    const currentUserId =
+      typeof getUserId === "function" ? getUserId() : (typeof window !== "undefined" && typeof window.getUserId === "function" ? window.getUserId() : null);
+    if (currentUserId) headers["X-User-Id"] = String(currentUserId);
+  } catch (_) {
+    // Ignore header injection issues on public pages (e.g., login/register).
+  }
+
   const options = {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers,
     cache: "no-store",
   };
 

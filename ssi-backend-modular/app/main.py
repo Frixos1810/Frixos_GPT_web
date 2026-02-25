@@ -14,6 +14,7 @@ from app.api.chat_api import router as chat_router
 from app.api.flashcard_api import router as flashcard_router
 from app.api.quiz_api import router as quiz_router
 from app.api.analytics_api import router as analytics_router
+from app.api.admin_api import router as admin_router
 
 
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -54,3 +55,4 @@ app.include_router(chat_router)
 app.include_router(flashcard_router)
 app.include_router(quiz_router)
 app.include_router(analytics_router)
+app.include_router(admin_router)

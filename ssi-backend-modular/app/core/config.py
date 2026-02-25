@@ -7,11 +7,19 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
 class Settings:
     PROJECT_NAME: str = "SSI Learning Backend (Structured Outputs Enabled)"
     OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY")
     OPENAI_VECTOR_STORE_ID: str | None = os.getenv("OPENAI_VECTOR_STORE_ID")
     DATABASE_URL: str | None = os.getenv("DATABASE_URL")
+    STRICT_VERIFIED_ONLY: bool = _env_bool("STRICT_VERIFIED_ONLY", default=False)
 
     def ensure(self) -> "Settings":
         if not self.DATABASE_URL:

@@ -6,6 +6,7 @@ from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import require_path_user
 from app.db.session import get_db
 from app.schemas import (
     ChatSessionCreate,
@@ -24,7 +25,11 @@ from app.services.chat_service import (
     send_message_and_get_reply,
 )
 
-router = APIRouter(prefix="/users/{user_id}", tags=["chat"])
+router = APIRouter(
+    prefix="/users/{user_id}",
+    tags=["chat"],
+    dependencies=[Depends(require_path_user)],
+)
 
 
 @router.post(

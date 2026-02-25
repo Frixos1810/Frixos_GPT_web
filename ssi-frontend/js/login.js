@@ -48,7 +48,11 @@ if (!form || !alertBox) {
       const userId = user.id ?? user.user?.id;
       if (!userId) throw new Error("Login succeeded but no user id returned.");
 
-      setUserId(userId);
+      if (typeof setUserSession === "function") {
+        setUserSession(user);
+      } else {
+        setUserId(userId);
+      }
       window.location.href = "chat.html";
     } catch (err) {
       showError(err.message);

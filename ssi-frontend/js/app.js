@@ -31,7 +31,9 @@ async function fetchFlashcardsIfNeeded(userId, chatId, assistantMessageId) {
   // Otherwise, fetch by source_message_id (flashcards were saved on send).
   const url = `${API_BASE}/users/${userId}/flashcards?source_message_id=${assistantMessageId}`;
 
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    headers: { "X-User-Id": String(userId) },
+  });
   if (!res.ok) throw new Error(`Flashcards fetch failed (${res.status})`);
   return await res.json();
 }
@@ -72,7 +74,10 @@ sendBtn.addEventListener("click", async () => {
     const url = `${API_BASE}/users/${userId}/chat-sessions/${chatId}/messages`;
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-User-Id": String(userId),
+      },
       body: JSON.stringify({ content }),
     });
 

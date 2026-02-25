@@ -43,7 +43,12 @@ function initRegisterPage() {
       const userId = user.id ?? user.user?.id;
       if (!userId) throw new Error("No user id returned.");
 
-      localStorage.removeItem("user_id");
+      if (typeof clearAuthSession === "function") {
+        clearAuthSession();
+      } else {
+        localStorage.removeItem("user_id");
+        localStorage.removeItem("user_role");
+      }
       localStorage.setItem(
         AUTH_NOTICE_KEY,
         JSON.stringify({
