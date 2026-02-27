@@ -57,47 +57,156 @@ def list_vector_store_files(
     *,
     vector_store_id: str,
 ) -> List[Dict[str, Any]]:
-    page = client.vector_stores.files.list(
-        vector_store_id=vector_store_id,
-        limit=100,
-        order="desc",
-    )
+    status_filters: List[Optional[str]] = [
+        None,
+        "in_progress",
+        "completed",
+        "failed",
+        "cancelled",
+    ]
+    collected_by_file_id: Dict[str, Dict[str, Any]] = {}
 
-    files: List[Dict[str, Any]] = []
-    for vector_store_file in page:
-        file_id = _get_attr(vector_store_file, "id", None)
-        filename = None
-        file_status = _get_attr(vector_store_file, "status", None)
-        file_error = _get_attr(vector_store_file, "last_error", None)
-        usage_bytes = _get_attr(vector_store_file, "usage_bytes", None)
-        created_at = _get_attr(vector_store_file, "created_at", None)
-
-        if file_id:
-            try:
-                file_obj = client.files.retrieve(file_id)
-                filename = _get_attr(file_obj, "filename", None)
-            except Exception:
-                filename = None
-
-        files.append(
-            {
-                "file_id": file_id,
-                "filename": filename or file_id or "unknown",
-                "status": file_status,
-                "usage_bytes": usage_bytes,
-                "created_at": created_at,
-                "last_error": (
-                    {
-                        "code": _get_attr(file_error, "code", None),
-                        "message": _get_attr(file_error, "message", None),
-                    }
-                    if file_error is not None
-                    else None
-                ),
+    for status_filter in status_filters:
+        after_cursor: str | None = None
+        seen_cursors: set[str] = set()
+        while True:
+            list_kwargs: Dict[str, Any] = {
+                "vector_store_id": vector_store_id,
+                "limit": 100,
+                "order": "desc",
             }
+            if status_filter is not None:
+                list_kwargs["filter"] = status_filter
+            if after_cursor:
+                list_kwargs["after"] = after_cursor
+
+            page = client.vector_stores.files.list(**list_kwargs)
+            page_items = list(_get_attr(page, "data", None) or [])
+            if not page_items:
+                break
+
+            for vector_store_file in page_items:
+                vector_store_file_id = _get_attr(vector_store_file, "id", None)
+                file_id = _get_attr(vector_store_file, "file_id", None) or vector_store_file_id
+                if not file_id:
+                    continue
+
+                filename = None
+                file_status = _get_attr(vector_store_file, "status", None)
+                file_error = _get_attr(vector_store_file, "last_error", None)
+                usage_bytes = _get_attr(vector_store_file, "usage_bytes", None)
+                created_at = _get_attr(vector_store_file, "created_at", None)
+
+                try:
+                    file_obj = client.files.retrieve(file_id)
+                    filename = _get_attr(file_obj, "filename", None)
+                except Exception:
+                    filename = None
+
+                collected_by_file_id[str(file_id)] = {
+                    "file_id": file_id,
+                    "vector_store_file_id": vector_store_file_id,
+                    "filename": filename or file_id or "unknown",
+                    "status": file_status,
+                    "usage_bytes": usage_bytes,
+                    "created_at": created_at,
+                    "last_error": (
+                        {
+                            "code": _get_attr(file_error, "code", None),
+                            "message": _get_attr(file_error, "message", None),
+                        }
+                        if file_error is not None
+                        else None
+                    ),
+                }
+
+            if len(page_items) < 100:
+                break
+
+            next_cursor = str(_get_attr(page_items[-1], "id", "")).strip()
+            if not next_cursor or next_cursor in seen_cursors:
+                break
+            seen_cursors.add(next_cursor)
+            after_cursor = next_cursor
+
+    files = list(collected_by_file_id.values())
+    files.sort(
+        key=lambda item: (
+            -int(item.get("created_at") or 0),
+            str(item.get("filename") or "").lower(),
         )
+    )
+    return files
+
+
+def list_processed_account_files(
+    *,
+    purpose: str | None = None,
+) -> List[Dict[str, Any]]:
+    files: List[Dict[str, Any]] = []
+    after_cursor: str | None = None
+    seen_cursors: set[str] = set()
+    normalized_purpose = str(purpose or "").strip().lower()
+
+    while True:
+        list_kwargs: Dict[str, Any] = {
+            "limit": 100,
+            "order": "desc",
+        }
+        if after_cursor:
+            list_kwargs["after"] = after_cursor
+
+        page = client.files.list(**list_kwargs)
+        page_items = list(_get_attr(page, "data", None) or [])
+        if not page_items:
+            break
+
+        for item in page_items:
+            file_id = _get_attr(item, "id", None)
+            file_purpose = str(_get_attr(item, "purpose", "")).strip().lower()
+            file_status = str(_get_attr(item, "status", "")).strip().lower()
+            if not file_id or file_status != "processed":
+                continue
+            if normalized_purpose and file_purpose != normalized_purpose:
+                continue
+            files.append(
+                {
+                    "file_id": file_id,
+                    "filename": _get_attr(item, "filename", file_id),
+                    "purpose": file_purpose,
+                    "status": file_status,
+                    "created_at": _get_attr(item, "created_at", None),
+                }
+            )
+
+        if len(page_items) < 100:
+            break
+
+        next_cursor = str(_get_attr(page_items[-1], "id", "")).strip()
+        if not next_cursor or next_cursor in seen_cursors:
+            break
+        seen_cursors.add(next_cursor)
+        after_cursor = next_cursor
 
     return files
+
+
+def attach_files_to_vector_store(
+    *,
+    vector_store_id: str,
+    file_ids: Sequence[str],
+) -> int:
+    attached_count = 0
+    for file_id in file_ids:
+        normalized = str(file_id or "").strip()
+        if not normalized:
+            continue
+        client.vector_stores.files.create(
+            vector_store_id=vector_store_id,
+            file_id=normalized,
+        )
+        attached_count += 1
+    return attached_count
 
 
 def build_vector_store_context(

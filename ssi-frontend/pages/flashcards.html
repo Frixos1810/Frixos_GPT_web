@@ -30,7 +30,7 @@
 
         <div id="cardBox" class="flashcard border rounded-4 p-4 bg-white">
           <div id="sideLabel" class="small text-muted mb-2">Question</div>
-          <div id="cardText" class="fs-5" style="white-space: pre-wrap;"></div>
+          <div id="cardText" class="fs-5" style="white-space: pre-wrap;" data-i18n-skip="true"></div>
         </div>
 
         <div class="d-flex justify-content-between mt-3">
@@ -50,6 +50,7 @@
     (function () {
       var v = window.__ssiAssetVersion || String(Date.now());
       var scripts = [
+        "../js/i18n.js",
         "../js/theme.js",
         "../js/flashcards.js",
         "../js/dev-hot-reload.js"

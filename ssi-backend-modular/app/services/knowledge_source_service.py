@@ -6,7 +6,11 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.openai_client import list_vector_store_files
+from app.core.openai_client import (
+    attach_files_to_vector_store,
+    list_processed_account_files,
+    list_vector_store_files,
+)
 from app.repositories.knowledge_source_repository import (
     create_knowledge_source,
     create_knowledge_source_audit,
@@ -53,6 +57,28 @@ async def _sync_knowledge_sources_from_vector_store(
         )
 
     vector_files = list_vector_store_files(vector_store_id=vector_store_id)
+    attached_file_ids = {
+        str(item.get("file_id") or "").strip()
+        for item in vector_files
+        if str(item.get("file_id") or "").strip()
+    }
+
+    # Auto-attach processed user_data files so newly uploaded dashboard files
+    # become visible and controllable without manual API attachment.
+    processed_user_data = list_processed_account_files(purpose="user_data")
+    missing_user_data_ids = [
+        str(item.get("file_id") or "").strip()
+        for item in processed_user_data
+        if str(item.get("file_id") or "").strip() and str(item.get("file_id") or "").strip() not in attached_file_ids
+    ]
+    auto_attached = 0
+    if missing_user_data_ids:
+        auto_attached = attach_files_to_vector_store(
+            vector_store_id=vector_store_id,
+            file_ids=missing_user_data_ids,
+        )
+        if auto_attached:
+            vector_files = list_vector_store_files(vector_store_id=vector_store_id)
     current_rows = await list_knowledge_sources(db)
 
     existing_vector_rows = [
@@ -112,6 +138,7 @@ async def _sync_knowledge_sources_from_vector_store(
         "created": created,
         "updated": updated,
         "removed": removed,
+        "auto_attached": auto_attached,
     }
 
 
@@ -128,6 +155,22 @@ async def list_vector_store_knowledge_sources_service(
         row for row in rows if (row.source_type or "").strip().lower() == VECTOR_STORE_FILE_SOURCE_TYPE
     ]
     return [KnowledgeSourceOut.model_validate(row) for row in vector_rows]
+
+
+def get_vector_store_runtime_config() -> dict[str, Any]:
+    vector_store_id = settings.OPENAI_VECTOR_STORE_ID
+    masked = None
+    if vector_store_id:
+        trimmed = str(vector_store_id).strip()
+        if len(trimmed) <= 8:
+            masked = trimmed
+        else:
+            masked = f"{trimmed[:6]}...{trimmed[-6:]}"
+    return {
+        "openai_vector_store_id": vector_store_id,
+        "openai_vector_store_id_masked": masked,
+        "strict_verified_only": bool(settings.STRICT_VERIFIED_ONLY),
+    }
 
 
 async def create_knowledge_source_service(
@@ -249,9 +292,10 @@ async def reindex_knowledge_sources_service(
     return KnowledgeSourceReindexOut(
         ok=True,
         message=(
-            "Synced vector store files into knowledge source controls "
+            f"Synced vector store ({settings.OPENAI_VECTOR_STORE_ID}) files into knowledge source controls "
             f"(discovered={sync_stats['discovered']}, created={sync_stats['created']}, "
-            f"updated={sync_stats['updated']}, removed={sync_stats['removed']}). "
+            f"updated={sync_stats['updated']}, removed={sync_stats['removed']}, "
+            f"auto_attached={sync_stats['auto_attached']}). "
             "No local embedding pipeline exists in this repo; filter changes apply immediately."
         ),
         total_sources=counts["total"],

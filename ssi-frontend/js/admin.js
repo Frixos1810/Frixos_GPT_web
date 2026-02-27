@@ -50,7 +50,11 @@ function escapeHtml(value) {
 
 function renderSources() {
   if (!sourcesTableBody || !sourcesEmptyState) return;
-  const rows = Array.isArray(adminState.sources) ? adminState.sources : [];
+  const rows = Array.isArray(adminState.sources)
+    ? [...adminState.sources].sort((a, b) =>
+        String(a?.title || "").localeCompare(String(b?.title || ""), undefined, { sensitivity: "base" })
+      )
+    : [];
   sourcesTableBody.innerHTML = "";
 
   if (!rows.length) {
@@ -59,7 +63,7 @@ function renderSources() {
   }
   sourcesEmptyState.classList.add("d-none");
 
-  rows.forEach((source) => {
+  rows.forEach((source, index) => {
     const tr = document.createElement("tr");
 
     const enabledChecked = source.enabled ? "checked" : "";
@@ -72,7 +76,7 @@ function renderSources() {
       : '<span class="badge text-bg-warning text-dark">Unverified</span>';
 
     tr.innerHTML = `
-      <td class="small text-muted">${source.id}</td>
+      <td class="small text-muted">${index + 1}</td>
       <td>
         <div class="fw-semibold">${escapeHtml(source.title)}</div>
         <div class="small text-muted">${enabledBadge} ${verifiedBadge}</div>
@@ -181,6 +185,13 @@ async function initAdminPage() {
     }
 
     setAuthorized();
+    try {
+      const runtime = await apiRequest("/admin/knowledge-sources/runtime");
+      const masked = runtime?.openai_vector_store_id_masked || runtime?.openai_vector_store_id || "(missing)";
+      showAlert(`Using vector store: ${masked}`, "info");
+    } catch (_) {
+      // Non-blocking; sync endpoint will still provide details.
+    }
     await loadSources();
   } catch (err) {
     const message = err?.message || "Unable to verify current user.";

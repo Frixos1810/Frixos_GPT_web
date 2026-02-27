@@ -34,6 +34,8 @@ const chatsPanel = document.getElementById("chatsPanel");
 const analyticsPanel = document.getElementById("analyticsPanel");
 const settingsPanel = document.getElementById("settingsPanel");
 const themeToggle = document.getElementById("themeToggle");
+const languageToggle = document.getElementById("languageToggle");
+const languageCurrentLabel = document.getElementById("languageCurrentLabel");
 const leftSidebar = document.getElementById("leftSidebar");
 const hideSidebarBtn = document.getElementById("hideSidebarBtn");
 const showSidebarBtn = document.getElementById("showSidebarBtn");
@@ -67,6 +69,28 @@ const analyticsTrendChart = document.getElementById("analyticsTrendChart");
 const analyticsHistoryList = document.getElementById("analyticsHistoryList");
 const analyticsMasterySummary = document.getElementById("analyticsMasterySummary");
 const analyticsFlashcardsList = document.getElementById("analyticsFlashcardsList");
+
+if (flashcardsCardTextEl) flashcardsCardTextEl.setAttribute("data-i18n-skip", "true");
+if (quizQuestionTextEl) quizQuestionTextEl.setAttribute("data-i18n-skip", "true");
+if (quizOptionsEl) quizOptionsEl.setAttribute("data-i18n-skip", "true");
+
+function i18nText(text) {
+  if (window.SSII18n?.translateText) {
+    return window.SSII18n.translateText(text);
+  }
+  return text;
+}
+
+function applyLanguageUiState() {
+  const lang = window.SSII18n?.getLanguage ? window.SSII18n.getLanguage() : "en";
+  if (languageToggle) languageToggle.checked = lang === "el";
+  if (languageCurrentLabel) {
+    languageCurrentLabel.textContent = lang === "el" ? "Greek" : "English";
+  }
+  if (window.SSII18n?.applyLanguage) {
+    window.SSII18n.applyLanguage(lang, document.body);
+  }
+}
 
 function applyAdminNavVisibility(userRole) {
   if (!adminNavLink) return;
@@ -166,6 +190,7 @@ function renderSourceDetail(detailEl, source, answerText) {
   snippetLabel.textContent = "Source excerpt";
   const snippetText = document.createElement("div");
   snippetText.className = "source-snippet";
+  snippetText.setAttribute("data-i18n-skip", "true");
   const answerTokens = tokenizeForHighlight(answerText, 5);
   snippetText.innerHTML = highlightText(snippet, answerTokens);
   snippetBlock.appendChild(snippetLabel);
@@ -178,6 +203,7 @@ function renderSourceDetail(detailEl, source, answerText) {
   answerLabel.textContent = "Answer (highlighted)";
   const answerTextEl = document.createElement("div");
   answerTextEl.className = "source-answer";
+  answerTextEl.setAttribute("data-i18n-skip", "true");
   const snippetTokens = tokenizeForHighlight(snippet, 5);
   answerTextEl.innerHTML = highlightText(answerText, snippetTokens);
   answerBlock.appendChild(answerLabel);
@@ -925,6 +951,7 @@ function renderMessage(m, messageFlashcards = []) {
 
   const contentEl = document.createElement("div");
   contentEl.style.whiteSpace = "pre-wrap";
+  contentEl.setAttribute("data-i18n-skip", "true");
   contentEl.textContent = m.content ?? "";
 
   bubble.appendChild(roleEl);
@@ -1140,7 +1167,8 @@ async function loadChats() {
       e.stopPropagation();
       closeChatOptionsMenu();
       const currentTitle = c.title || `Chat #${c.id}`;
-      const nextTitleInput = window.prompt("Rename chat", currentTitle);
+      const promptText = i18nText("Rename chat");
+      const nextTitleInput = window.prompt(promptText, currentTitle);
       if (nextTitleInput === null) return;
 
       const nextTitle = nextTitleInput.trim();
@@ -1166,7 +1194,7 @@ async function loadChats() {
       closeChatOptionsMenu();
 
       const confirmed = window.confirm(
-        `Delete "${c.title || `Chat #${c.id}`}"?\n\nThis will delete this chat and its messages.`,
+        i18nText(`Delete "${c.title || `Chat #${c.id}`}"?\n\nThis will delete this chat and its messages.`),
       );
       if (!confirmed) return;
 
@@ -1352,10 +1380,29 @@ themeToggle.onchange = () => {
     applyTheme(theme);
   }
 };
+if (languageToggle) {
+  languageToggle.onchange = () => {
+    const nextLanguage = languageToggle.checked ? "el" : "en";
+    if (window.SSII18n?.setLanguage) {
+      window.SSII18n.setLanguage(nextLanguage);
+    } else {
+      localStorage.setItem("ssi_language", nextLanguage);
+    }
+    applyLanguageUiState();
+  };
+}
+
+window.addEventListener("ssi:languagechange", applyLanguageUiState);
+window.addEventListener("storage", (event) => {
+  if (window.SSII18n?.isLanguageKey ? window.SSII18n.isLanguageKey(event.key) : event.key === "ssi_language") {
+    applyLanguageUiState();
+  }
+});
 
 // Initial load
 (async () => {
   loadTheme();
+  applyLanguageUiState();
   await hydrateCurrentUserRole();
   setSideTab("chats");
   setSidebarVisible(true);

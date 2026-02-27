@@ -17,12 +17,20 @@ from app.schemas import (
 from app.services.knowledge_source_service import (
     create_knowledge_source_service,
     delete_knowledge_source_service,
+    get_vector_store_runtime_config,
     list_vector_store_knowledge_sources_service,
     reindex_knowledge_sources_service,
     update_knowledge_source_service,
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+@router.get("/knowledge-sources/runtime")
+async def admin_knowledge_sources_runtime(
+    current_admin: User = Depends(require_admin),
+):
+    return get_vector_store_runtime_config()
 
 
 @router.get("/knowledge-sources", response_model=List[KnowledgeSourceOut])

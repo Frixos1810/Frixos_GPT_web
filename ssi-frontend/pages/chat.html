@@ -69,12 +69,26 @@
       <section id="settingsPanel" class="d-none">
         <div class="card settings-card">
           <div class="card-body">
-            <div class="small text-muted mb-2">Appearance</div>
-            <div class="d-flex justify-content-between align-items-center">
-              <span class="small">Dark theme</span>
+            <div class="small text-muted settings-title">Appearance</div>
+
+            <div class="settings-row">
+              <div class="settings-row-meta">
+                <span class="small fw-semibold">Dark theme</span>
+              </div>
               <label class="theme-switch" for="themeToggle">
                 <input id="themeToggle" type="checkbox" />
                 <span class="theme-slider"></span>
+              </label>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-row-meta">
+                <span class="small fw-semibold">Language</span>
+                <span id="languageCurrentLabel" class="settings-hint">English</span>
+              </div>
+              <label class="theme-switch language-switch" for="languageToggle">
+                <input id="languageToggle" type="checkbox" />
+                <span class="theme-slider" data-off="EN" data-on="GR"></span>
               </label>
             </div>
           </div>
@@ -207,6 +221,7 @@
     var scripts = [
       "../js/api.js",
       "../js/auth.js",
+      "../js/i18n.js",
       "../js/theme.js",
       "../js/chat.js",
       "../js/dev-hot-reload.js"
